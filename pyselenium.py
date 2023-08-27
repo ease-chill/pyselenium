@@ -1,6 +1,6 @@
 import requests
 import platform, zipfile, os
-from config import *
+from .config import *
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service as ChromeService
 
@@ -91,5 +91,3 @@ def get_platform():
         os_arch = 'mac-arm64' if arch == 'arm64' else 'mac-x64'
 
     return os_arch
-
-
