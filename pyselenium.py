@@ -3,30 +3,71 @@ import platform, zipfile, os
 from .config import *
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service as ChromeService
+from selenium.common.exceptions import SessionNotCreatedException
 
 
-def get_browser(headless=False):
 
-    driver_path = get_chromedriver()
+def get_browser(working_dir,headless=False):
+
+    driver_path = get_chromedriver(working_dir)
 
     if not driver_path:
         return None
+    
+
     service = ChromeService(executable_path=driver_path)
     options = webdriver.ChromeOptions()
     if headless:
         options.add_argument("--headless=new")
         options.add_argument("--disable-dev-shm-usage")
+
+    driver = None
+
+    try:
+        driver = webdriver.Chrome(service=service, options=options)
+
+    except SessionNotCreatedException:
+        print("Error: ChromeDriver is outdated. Updating ChromeDriver...")
+
+        os.remove(driver_path)
+        driver_path = get_chromedriver(update=True)
+
+        if not driver_path:
+            print("Error: Failed to update ChromeDriver.")
+            return None
+
+    if driver:
+        return driver
+    else:
+        try:
+            driver = webdriver.Chrome(service=service, options=options)
+        except SessionNotCreatedException as e:
+            print("Error: Failed to start browser after updating ChromeDriver.")
+            print(f"Error message: {str(e)}")
+            return None
     
-    driver = webdriver.Chrome(service=service, options=options)
-
-    return driver
 
 
 
-def get_chromedriver(channel='stable'):
+def get_chromedriver(working_dir, update=False, channel='stable'):
 
     url = get_chromedriver_url(channel)
-    script_dir = os.path.dirname(os.path.abspath(__file__))
+
+
+    # Check if chromedriver exists
+    platform = get_platform()
+    
+    if platform == 'win32' or platform == 'win64':
+        driver_filename = 'chromedriver.exe'
+    else:
+        driver_filename = 'chromedriver'
+
+    driver_path = os.path.join(working_dir, driver_filename)
+
+    set_chromedriver_permissions(driver_path, platform)
+
+    if os.path.exists(driver_path) and not update:
+        return driver_path
     
 
     if url:
@@ -41,7 +82,7 @@ def get_chromedriver(channel='stable'):
                     file_name = file.split('/')[1]
                     if file_name.startswith('chromedriver'):
 
-                        extract_path = os.path.join(script_dir, file_name)
+                        extract_path = os.path.join(working_dir, file_name)
 
                         with zip_ref.open(file) as file_in_zip, open(extract_path, 'wb') as extracted_file:
                             extracted_file.write(file_in_zip.read())
@@ -78,6 +119,13 @@ def get_chromedriver_url(channel='stable'):
     
     return download_url
     
+
+
+def set_chromedriver_permissions(driver_path, platform):
+    if platform == 'win32' or platform == 'win64':
+        pass
+    else:
+        os.chmod(driver_path, 755)
 
 def get_platform():
     os_type = platform.system()
