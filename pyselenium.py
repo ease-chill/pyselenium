@@ -64,9 +64,9 @@ def get_chromedriver(working_dir, update=False, channel='stable'):
 
     driver_path = os.path.join(working_dir, driver_filename)
 
-    set_chromedriver_permissions(driver_path, platform)
 
     if os.path.exists(driver_path) and not update:
+        set_chromedriver_permissions(driver_path, platform)
         return driver_path
     
 
@@ -88,6 +88,8 @@ def get_chromedriver(working_dir, update=False, channel='stable'):
                             extracted_file.write(file_in_zip.read())
 
             os.remove('chromedriver.zip')
+
+            set_chromedriver_permissions(extract_path, platform)
 
             return extract_path
         
